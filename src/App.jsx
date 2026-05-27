@@ -16,7 +16,7 @@ function blankApplicant() {
   return {
     name: "",
     surname: "",
-    creditScore: "",
+    itcScore: "",
     salaryType: "Fixed",
     grossIncome: "",
     netIncome: "",
@@ -32,6 +32,7 @@ export default function App() {
   const [applicantCount, setApplicantCount] = useState(1);
   const [bondAmount, setBondAmount] = useState("");
   const [agentEmail, setAgentEmail] = useState("");
+
   const [applicants, setApplicants] = useState([
     blankApplicant(),
     blankApplicant(),
@@ -112,41 +113,115 @@ export default function App() {
     };
   }, [applicants, applicantCount, bondAmount]);
 
-  const emailReport = () => {
-    const body = `
-Property Affordability Report
+  const buildReport = () => {
+    return `
+PROPERTY AFFORDABILITY REPORT
 
-Final Affordability:
-${money(results.finalAmount)}
+==================================================
 
-Option 1:
+APPLICANT DETAILS
+
+${applicants
+  .slice(0, applicantCount)
+  .map(
+    (a, i) => `
+Applicant ${i + 1}
+
+Name:
+${a.name} ${a.surname}
+
+ITC Score:
+${a.itcScore}
+
+Salary Type:
+${a.salaryType}
+
+ITC Debt:
+${money(a.itcDebt)}
+
+`
+  )
+  .join("\n")}
+
+==================================================
+
+CALCULATION SUMMARY
+
+Total Gross Income:
+${money(results.totalGross)}
+
+Total Net Income:
+${money(results.totalNet)}
+
+Living Costs:
+${money(results.livingCosts)}
+
+ITC Debt:
+${money(results.totalDebt)}
+
+Net Income After Deductions:
+${money(results.netAfter)}
+
+==================================================
+
+AFFORDABILITY
+
+Option 1 (30% RTI):
 ${money(results.option1)}
 
 Option 2:
 ${money(results.option2)}
 
-Bond Repayment:
+FINAL AFFORDABILITY:
+${money(results.finalAmount)}
+
+==================================================
+
+BOND DETAILS
+
+Bond Amount Applied For:
+${money(bondAmount)}
+
+Estimated Bond Repayment:
 ${money(results.bondRepayment)}
 
-Cash Left:
+Cash Left After Bond Repayment:
 ${money(results.cashLeft)}
+
+==================================================
 `;
+  };
+
+  const emailReport = () => {
+    const body = encodeURIComponent(buildReport());
 
     window.location.href =
-      `mailto:${agentEmail}?subject=Affordability Report&body=${encodeURIComponent(body)}`;
+      `mailto:${agentEmail}?subject=Affordability Report&body=${body}`;
   };
 
   return (
-    <div style={{
-      padding: 30,
-      fontFamily: "Arial",
-      maxWidth: 1200,
-      margin: "0 auto"
-    }}>
+    <div
+      style={{
+        fontFamily: "Arial",
+        padding: 20,
+        maxWidth: 1200,
+        margin: "0 auto",
+      }}
+    >
       <h1>Property Affordability Calculator</h1>
 
-      <div style={{ marginBottom: 20 }}>
-        <label>Applicants: </label>
+      <div
+        style={{
+          border: "1px solid #ccc",
+          padding: 20,
+          borderRadius: 10,
+          marginBottom: 20,
+        }}
+      >
+        <label>Number of Applicants:</label>
+
+        <br />
+        <br />
 
         <select
           value={applicantCount}
@@ -163,10 +238,10 @@ ${money(results.cashLeft)}
         <div
           key={i}
           style={{
-            border: "1px solid #ddd",
+            border: "1px solid #ccc",
             padding: 20,
-            marginBottom: 20,
             borderRadius: 10,
+            marginBottom: 20,
           }}
         >
           <h2>Applicant {i + 1}</h2>
@@ -176,6 +251,27 @@ ${money(results.cashLeft)}
             value={a.name}
             onChange={(e) =>
               updateApplicant(i, "name", e.target.value)
+            }
+          />
+
+          <br /><br />
+
+          <input
+            placeholder="Surname"
+            value={a.surname}
+            onChange={(e) =>
+              updateApplicant(i, "surname", e.target.value)
+            }
+          />
+
+          <br /><br />
+
+          <input
+            type="number"
+            placeholder="ITC Score"
+            value={a.itcScore}
+            onChange={(e) =>
+              updateApplicant(i, "itcScore", e.target.value)
             }
           />
 
@@ -254,18 +350,32 @@ ${money(results.cashLeft)}
         </div>
       ))}
 
-      <div style={{
-        border: "1px solid #ddd",
-        padding: 20,
-        borderRadius: 10
-      }}>
+      <div
+        style={{
+          border: "1px solid #ccc",
+          padding: 20,
+          borderRadius: 10,
+        }}
+      >
         <h2>Results</h2>
 
-        <p>Total Gross: {money(results.totalGross)}</p>
-        <p>Total Net: {money(results.totalNet)}</p>
-        <p>Net After Deductions: {money(results.netAfter)}</p>
+        <p>Total Gross Income: {money(results.totalGross)}</p>
+
+        <p>Total Net Income: {money(results.totalNet)}</p>
+
+        <p>Living Costs: {money(results.livingCosts)}</p>
+
+        <p>ITC Debt: {money(results.totalDebt)}</p>
+
+        <p>
+          Net Income After Deductions:
+          {money(results.netAfter)}
+        </p>
+
+        <hr />
 
         <p>Option 1: {money(results.option1)}</p>
+
         <p>Option 2: {money(results.option2)}</p>
 
         <h2>
@@ -273,24 +383,32 @@ ${money(results.cashLeft)}
           {money(results.finalAmount)}
         </h2>
 
-        <br />
+        <hr />
 
         <input
           type="number"
-          placeholder="Bond Amount"
+          placeholder="Bond Amount Applied For"
           value={bondAmount}
           onChange={(e) => setBondAmount(e.target.value)}
         />
 
-        <p>Bond Repayment: {money(results.bondRepayment)}</p>
+        <br /><br />
 
-        <p>Cash Left: {money(results.cashLeft)}</p>
+        <p>
+          Bond Repayment:
+          {money(results.bondRepayment)}
+        </p>
 
-        <br />
+        <p>
+          Cash Left After Bond Repayment:
+          {money(results.cashLeft)}
+        </p>
+
+        <hr />
 
         <input
           type="email"
-          placeholder="Agent Email"
+          placeholder="Agent Email Address"
           value={agentEmail}
           onChange={(e) => setAgentEmail(e.target.value)}
         />
@@ -298,7 +416,13 @@ ${money(results.cashLeft)}
         <br /><br />
 
         <button onClick={emailReport}>
-          Email Report
+          Email Affordability Report
+        </button>
+
+        <br /><br />
+
+        <button onClick={() => window.print()}>
+          Print Report
         </button>
       </div>
     </div>
